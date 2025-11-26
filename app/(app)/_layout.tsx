@@ -33,8 +33,6 @@ import { useSession } from '@/contexts/auth'
 const AppLayout = () => {
   const { session, isLoading } = useSession()
 
-  console.log('Loading session: ', isLoading)
-  console.log('Session in app layout: ', session)
   // Loading or splash screen
   if (isLoading) {
     return <Text>Loading ...</Text>
@@ -46,7 +44,7 @@ const AppLayout = () => {
   }
 
   // This layout can be deferred because it's not the root layout
-  return <Stack />
+  return <Stack screenOptions={{ headerShown: false }} />
 }
 
 export default AppLayout

@@ -33,7 +33,6 @@ const SessionProvider = ({ children }: PropsWithChildren) => {
     const [[isLoading, session], setSession] = useStorageState('session')
 
     const handleLogin = async(payload: LOGIN_PAYLOAD) => {
-        console.log('Loggin in...')
         try {
             const data = await apiFetch<{token: string}>("/auth/login", {
                 method: "POST",

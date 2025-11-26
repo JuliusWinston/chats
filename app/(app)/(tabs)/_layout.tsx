@@ -20,7 +20,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -29,16 +29,14 @@ export default function TabLayout() {
           title: 'Groups',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.2.badge.plus.fill" color={color} />
         }}
-      >
-
-      </Tabs.Screen>
-      {/* <Tabs.Screen
-        name="explore"
+      />
+      <Tabs.Screen
+        name="settings"
         options={{
-          title: 'Explore',
+          title: 'Settings',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
-      /> */}
+      />
     </Tabs>
   );
 }

@@ -1,12 +1,10 @@
 import { useState } from "react"
-import { useRouter } from "expo-router"
 import { View, Text, StyleSheet, Button, TextInput } from "react-native"
 import { useSession } from "@/contexts/auth"
 
 import { LOGIN_PAYLOAD } from "@/types"
 
 const LoginScreen = () => {
-    const router = useRouter()
     const { signIn } = useSession()
 
     const [msg, setMessage] = useState<string>('')
