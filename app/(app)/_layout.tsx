@@ -27,6 +27,7 @@
 
 import { Text } from 'react-native'
 import { Redirect, Stack } from 'expo-router'
+import WelcomeScreen from '../welcome'
 
 import { useSession } from '@/contexts/auth'
 
@@ -35,7 +36,7 @@ const AppLayout = () => {
 
   // Loading or splash screen
   if (isLoading) {
-    return <Text>Loading ...</Text>
+    return <WelcomeScreen />
   }
 
   // Only requre authentication within the (app) group's layout
