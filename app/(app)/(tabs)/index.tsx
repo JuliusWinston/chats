@@ -19,7 +19,7 @@ const HomeScreen: React.FC = () => {
   return (
     <>
       <View style={styles.container}>
-        <Header title={name} back onBack={() => console.log('Go back')} />
+        <Header title={name} />
 
         <FlatList
           data={dummyMessages}

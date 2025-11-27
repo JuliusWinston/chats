@@ -1,3 +1,5 @@
+import { useStorageState } from "./use-storage"
+
 type API_REQUEST = {
     method: "GET" | "POST" | "PUT" | "PATCH"
     query?: Record<string, any>
@@ -10,6 +12,8 @@ const BASE_URL = "https://unswaying-nonoperating-aarav.ngrok-free.dev/api/v1"
 
 const useApi = () => {
 
+    const [[isLoading, session], setSession] = useStorageState('session')
+
     const apiFetch = async <T,>(
         endpoint: string, 
         options: API_REQUEST = { method: "GET" }
@@ -18,28 +22,15 @@ const useApi = () => {
             "Content-Type": "Application/json",
             ...options.headers
         }
-        if (options.token?.length) {
-            preparedHeaders.Authorization = `Bearer ${options.token}`
+        if (session?.length) {
+            preparedHeaders.Authorization = `Bearer ${session}`
         }
 
-        /**
-         * 
-         * Convert the query object into a usable query string
-         */
-        let preparedQueries: string = '?'
+        let preparedQueries = ''
 
-        if (options.query) {
-            const keys: string[] = Object.keys(options.query)
-            const values: string[] = Object.values(options.query)
-
-            for (let i = 0; i < keys.length; i++) {
-                if (i === 0) {
-                    preparedQueries = preparedQueries + `${keys[i]}=${values[i]}`
-                }
-                else {
-                    preparedQueries = preparedQueries + `&${keys[i]}=${values[i]}`
-                }
-            }
+        if (options.query && Object.keys(options.query).length > 0) {
+            const params = new URLSearchParams(options.query).toString()
+            preparedQueries = `?${params}`
         }
 
         try {
