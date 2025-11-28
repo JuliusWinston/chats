@@ -13,6 +13,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import Header from "@/components/ui/Header";
 import useApi from "@/hooks/use-api";
+import { useStorageState } from "@/hooks/use-storage";
+import { useRouter } from "expo-router";
+import { useSession } from "@/contexts/auth";
 
 const dummyGroups = [
   { id: "1", name: "Developers Hub", members: 124 },
@@ -30,7 +33,7 @@ type GROUP = {
   ownerId: string
   created: string
   type: string
-  member_count: number
+  members_count: number
 }
 
 type GROUPS_RESPONSE = {
@@ -38,15 +41,40 @@ type GROUPS_RESPONSE = {
   data: GROUP[]
 }
 
+type GROUP_PAYLOAD = {
+  groupName: string
+  isPrivate: boolean
+  membersToAdd: string[]
+}
+
+type CREATE_GROUP_RESPONSE = {
+  message: string
+  data: {
+    id: string
+    groupName: string
+    ownerId: string
+    members_count: number
+    created: string
+    type: string
+  }
+}
+
 const GroupsScreen = () => {
+  const router = useRouter()
+  const { selectGroup } = useSession()
+
   const {apiFetch} = useApi()
   const [search, setSearch] = useState("");
   const [groups, setGroups] = useState<GROUP[]>([] as GROUP[])
-  const [ showModal, setShowModal ] = useState<boolean>(false)
+  const [showModal, setShowModal] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
-  const [isEnabled, setIsEnabled] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(false)
+  const [[isLoading, session], setSession] = useStorageState('session')
 
-  const filtered = groups.filter((g) =>
+  const [isCreatingGroup, setIsCreatingGroup] = useState<boolean>(false)
+  const [groupPayload, setGroupPayload] = useState<GROUP_PAYLOAD>({} as GROUP_PAYLOAD)
+
+  const filtered = groups?.filter((g) =>
     g.groupName.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -57,20 +85,67 @@ const GroupsScreen = () => {
 
     try {
       const res = await apiFetch<GROUPS_RESPONSE>(`/groups/${userId}/joined`)
-      console.log()
-      const data: GROUP[] = res.data
+      const data: GROUP[] = res?.data as GROUP[]
       setGroups(data)
     } catch (err) {
       console.warn("JSON parse failed:", err)
-      throw new Error("Server did not return valid JSON");
     } finally {
       setLoading(false)
     }
   }
 
+  const handleGetCreateGroup = async () => {
+    setIsCreatingGroup(true)
+
+    try {
+      console.log('creating group')
+      const res = await apiFetch<CREATE_GROUP_RESPONSE>("/groups/", {
+        method: 'POST',
+        body: { ...groupPayload, membersToAdd: []}
+      })
+      const data: CREATE_GROUP_RESPONSE = res as CREATE_GROUP_RESPONSE
+      console.log('Response: ', res)
+
+      if (data?.message.toLowerCase() === "created") {
+        console.log('Successfully created group')
+        await handleGetGroups()
+      }
+    } catch (err) {
+      console.warn(err)
+    } finally {
+      setIsCreatingGroup(false)
+      setShowModal(false)
+      setGroupPayload({} as GROUP_PAYLOAD)
+    }
+  }
+
+  const goToChats = (id: string) => {
+    console.log('go to chat: ', id)
+    selectGroup(id)
+    router.replace('/')
+  }
+
   useEffect(() => {
-    handleGetGroups()
-  }, [])
+    if (isLoading && !session) {
+      setLoading(true)
+    } else {
+      handleGetGroups()
+    }
+
+  }, [isLoading, session])
+
+  useEffect(() => {
+    setGroupPayload((prev) => {
+      return {...prev, isPrivate: isEnabled}
+    })
+  }, [isEnabled])
+
+  useEffect(() => {
+    if (groups?.length) {
+      selectGroup(groups[0].id)
+    }
+
+  }, [groups])
   return (
     <View style={styles.container}>
       <Header title="Groups" />
@@ -88,38 +163,58 @@ const GroupsScreen = () => {
 
       {/* Group List */}
       {
-        loading ? (
+        (loading && !groups?.length) ? (
           <View style={[styles.container, styles.center]}>
             <ActivityIndicator color={"#238636"} size="large" />
           </View>
         ) : (
-          <FlatList
-            data={filtered}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.groupItem}
-                // onPress={() => navigation.navigate("GroupChat", { name: item.name })}
-                onPress={() => console.log('go to single group')}
-              >
-                <View style={styles.groupIcon}>
-                  <Ionicons name="people" size={24} color="#fff" />
-                </View>
+          <>
+            {
+              (isCreatingGroup && loading) && (
+                <TouchableOpacity
+                  style={styles.groupItem}
+                >
+                  <View style={styles.groupIcon}>
+                    <Ionicons name="people" size={24} color="#fff" />
+                  </View>
 
-                <View style={styles.groupText}>
-                  <Text style={styles.groupName}>{item.groupName}</Text>
-                  <Text style={styles.groupMembers}>{item.member_count} members</Text>
-                </View>
+                  <View style={styles.groupText}>
+                    <Text style={styles.groupName}></Text>
+                    <Text style={styles.groupMembers}>Fetching new group ...</Text>
+                  </View>
 
-                <Ionicons name="chevron-forward" size={22} color="#bbb" />
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={() => (
-              <View style={[styles.container, styles.center]}>
-                <Text>This user has no groups</Text>
-              </View>
-            )}
-          />
+                  <ActivityIndicator color={"#238636"} />
+                </TouchableOpacity>
+              )
+            }
+            
+            <FlatList
+              data={filtered}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.groupItem}
+                  onPress={() => goToChats(item.id)}
+                >
+                  <View style={styles.groupIcon}>
+                    <Ionicons name="people" size={24} color="#fff" />
+                  </View>
+
+                  <View style={styles.groupText}>
+                    <Text style={styles.groupName}>{item.groupName}</Text>
+                    <Text style={styles.groupMembers}>{item.members_count} member(s)</Text>
+                  </View>
+
+                  <Ionicons name="chevron-forward" size={22} color="#bbb" />
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={() => (
+                <View style={[styles.container, styles.center]}>
+                  <Text>Group(s) not found</Text>
+                </View>
+              )}
+            />
+          </>
         )
       }
 
@@ -133,7 +228,7 @@ const GroupsScreen = () => {
         transparent={true}
         visible={showModal}
       >
-          <View style={[styles.container, styles.center]}>
+          <View style={[styles.modalContainer, styles.center]}>
             <View style={styles.modalView}>
               <TouchableOpacity
                 style={[styles.button, {alignSelf: "flex-end"}]}
@@ -150,9 +245,9 @@ const GroupsScreen = () => {
                   <TextInput
                     style={styles.input}
                     placeholder="Group name"
-                    // onChangeText={(e) =>
-                    //   setFormData((prev) => ({ ...prev, email: e }))
-                    // }
+                    onChangeText={(e) =>
+                      setGroupPayload((prev) => ({ ...prev, groupName: e }))
+                    }
                   />
       
                   <View style={{flexDirection: "row", alignItems: "center" }}>
@@ -166,8 +261,9 @@ const GroupsScreen = () => {
                   </View>
                 </View>     
       
-                <TouchableOpacity style={styles.btn} onPress={() => {}}>
-                  <Text style={styles.buttonText}>Continue</Text>
+                <TouchableOpacity style={styles.btn} onPress={handleGetCreateGroup}>
+                  {!isCreatingGroup ? (<Text style={styles.buttonText}>Continue</Text>) : 
+                  (<ActivityIndicator size="small" color="white" />)}
                 </TouchableOpacity>
               </View>
             </View>
@@ -181,6 +277,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F4F7F5",
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)'
   },
   searchContainer: {
     flexDirection: "row",
@@ -338,9 +438,5 @@ const styles = StyleSheet.create({
 
 export default GroupsScreen
 
-// 73ed3bc4-64d5-470b-bba7-9660b41fbac8
-
-// eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqdWxpdXMud2luc3RvbkB0dXJudGFibC5pbyIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzY0MjM0NjM2LCJleHAiOjE3NjQzMjEwMzZ9.qn2dviZHgOMm8EZeB3CRoVmEODlwoK6ozWmzNTUlMTU
-
 // 49d61d72-d72e-46ac-af77-4ca0446ab6ec
-// eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtYW5hZ2VyQG1hbGxvbi5jaGF0Iiwicm9sZSI6Ik1BTkFHRVIiLCJpYXQiOjE3NjQyNTkwNjcsImV4cCI6MTc2NDM0NTQ2N30.0rGZ-P8vDxKsyd0sZPsP0kCzoqKQJ8yVTWqn_fRZx-s
+// eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtYW5hZ2VyQG1hbGxvbi5jaGF0Iiwicm9sZSI6Ik1BTkFHRVIiLCJpYXQiOjE3NjQzMTU0MTAsImV4cCI6MTc2NDQwMTgxMH0.0lSWK0uoGo09JXgjyEogS4XYpvGUtxKK9g-hVC8jJn0

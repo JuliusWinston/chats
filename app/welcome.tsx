@@ -4,7 +4,7 @@ const WelcomeScreen = () => {
     return (
         <>
             <View style={styles.container}>
-                <Text style={styles.title}>Group One</Text>
+                <Text style={styles.title}>Hermes</Text>
                 <Text style={styles.subtitle}>Chat • App • Demo</Text>
 
                 <TouchableOpacity

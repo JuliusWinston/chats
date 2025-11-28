@@ -18,20 +18,20 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         tabBarButton: HapticTab,
       }}>
+        <Tabs.Screen
+          name="groups"
+          options={{
+            headerShown: false,
+            title: 'Groups',
+            tabBarIcon: ({ color }) => <GroupsIcon color={color} />
+          }}
+        />
       <Tabs.Screen
         name="index"
         options={{
           headerShown: false,
           title: 'Chat',
           tabBarIcon: ({ color }) => <MessageIcon color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="(groups)"
-        options={{
-          headerShown: false,
-          title: 'Groups',
-          tabBarIcon: ({ color }) => <GroupsIcon color={color} />
         }}
       />
       <Tabs.Screen

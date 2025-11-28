@@ -11,7 +11,6 @@ type API_REQUEST = {
 const BASE_URL = "https://unswaying-nonoperating-aarav.ngrok-free.dev/api/v1"
 
 const useApi = () => {
-
     const [[isLoading, session], setSession] = useStorageState('session')
 
     const apiFetch = async <T,>(
@@ -19,7 +18,7 @@ const useApi = () => {
         options: API_REQUEST = { method: "GET" }
     ) => {
         let preparedHeaders: Record<string, string> = {
-            "Content-Type": "Application/json",
+            "Content-Type": "application/json",
             ...options.headers
         }
         if (session?.length) {
@@ -33,15 +32,31 @@ const useApi = () => {
             preparedQueries = `?${params}`
         }
 
-        try {
-            const response = await fetch(`${BASE_URL}${endpoint}${preparedQueries}`, {
+        let handledOptions = {}
+        if (options.body && ['POST', 'PUT', 'PATCH'].includes(options.method)) {
+            handledOptions = {
                 method: options.method,
                 headers: preparedHeaders,
                 body: JSON.stringify(options.body)
-            })
+            }
+        } else {
+            handledOptions = {
+                method: options.method,
+                headers: preparedHeaders
+            }
+        }
 
-            const data: T | null = await response.json()
-            return data as T
+        try {
+            const response = await fetch(`${BASE_URL}${endpoint}${preparedQueries}`, {...handledOptions})
+            console.log('Response: ', JSON.stringify(response))
+            if (response.ok) {
+                const data: T | null = await response.json()
+                return data as T
+            } else {
+                throw new Error("Something went wrong")
+            }
+
+            return
         } catch (err) {
             throw err
         }

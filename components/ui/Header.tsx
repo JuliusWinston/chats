@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 
 type HeaderProps = {
-    title: string
+    title?: string
     back?: any
     onBack?: () => void
 }

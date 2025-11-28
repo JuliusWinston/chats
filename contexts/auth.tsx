@@ -1,4 +1,4 @@
-import { useContext, createContext, type PropsWithChildren } from 'react'
+import { useContext, useState, useEffect, createContext, type PropsWithChildren } from 'react'
 import { useRouter } from 'expo-router'
 import { useStorageState } from '@/hooks/use-storage'
 import useApi from "@/hooks/use-api"
@@ -8,12 +8,16 @@ import { LOGIN_PAYLOAD } from '@/types'
 const AuthContext = createContext<{
     signIn: (payload: LOGIN_PAYLOAD) => void
     signOut: () => void
+    selectGroup: (id: string) => void
     session?: string | null
+    groupId?: string | null
     isLoading: boolean
 }>({
     signIn: () => null,
     signOut: () => null,
+    selectGroup: () => null,
     session: null,
+    groupId: null,
     isLoading: false
 })
 
@@ -31,6 +35,11 @@ const SessionProvider = ({ children }: PropsWithChildren) => {
     const { apiFetch } = useApi()
     const router = useRouter()
     const [[isLoading, session], setSession] = useStorageState('session')
+    const [groupId, setGroupId] = useState<string>('')
+
+    const handleSelectGroup = (id: string) => {
+        setGroupId(id)
+    }
 
     const handleLogin = async(payload: LOGIN_PAYLOAD) => {
         try {
@@ -38,11 +47,11 @@ const SessionProvider = ({ children }: PropsWithChildren) => {
                 method: "POST",
                 body: payload
             })
-            console.log('auth response: ', JSON.stringify(data))
-            setSession(data?.token)
-            router.navigate("/(tabs)")
+            setSession(data?.token as string)
+            router.replace('/groups')
         } catch (err) {
             console.error(err)
+            throw err
         }
     }
 
@@ -55,7 +64,11 @@ const SessionProvider = ({ children }: PropsWithChildren) => {
                 signOut: () => {
                     setSession(null)
                 },
+                selectGroup: (id: string) => {
+                    handleSelectGroup(id)
+                },
                 session,
+                groupId,
                 isLoading
             }}
         >

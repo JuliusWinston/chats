@@ -26,7 +26,6 @@ const LoginScreen = () => {
     } else {
       setMessage("");
       signIn({ ...formData });
-      console.log("routing to tabs");
     }
   };
 
@@ -36,7 +35,7 @@ const LoginScreen = () => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.card}>
-          <Text style={styles.title}>W • A • M • B</Text>
+          <Text style={styles.title}>Hermes</Text>
           <Text style={styles.subtitle}>
             Please enter your credentials to sign in
           </Text>

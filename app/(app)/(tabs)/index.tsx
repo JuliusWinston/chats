@@ -1,10 +1,12 @@
-import { useState } from "react"
-
-import { View, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Text, StyleSheet } from "react-native"
+import { useState, useEffect } from "react"
 import { useSession } from "@/contexts/auth"
+import { View, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Text, StyleSheet, ActivityIndicator } from "react-native"
 import Header from "@/components/ui/Header"
 import MessageBubble from "@/components/ui/Message"
+import { Ionicons } from "@expo/vector-icons"
+import useApi from "@/hooks/use-api"
 
+const userId = "49d61d72-d72e-46ac-af77-4ca0446ab6ec"
 
 const dummyMessages = [
   {id: "1", text: "Hey!", sent: true},
@@ -12,23 +14,101 @@ const dummyMessages = [
   {id: "3", text: "I'm great 🌿", sent: true},
 ]
 
-const HomeScreen: React.FC = () => {
-  const name = "Julius Winston" // get this from route params
-  const [input, setInput] = useState("")
+type CHAT = {
+  id: string,
+  groupId: "string",
+  sender: {
+    id: string,
+    username: string
+  },
+  content: string,
+  created: string
+}
 
+const HomeScreen: React.FC = () => {
+  const { apiFetch } = useApi()
+  const {groupId} = useSession()
+  const [input, setInput] = useState("")
+  const [loadingChats, setLoadingChats] = useState<boolean>(false)
+  const [sendingChat, setSendingChat] = useState<boolean>(false)
+  const [chats, setChats] = useState<CHAT[]>([])
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
+
+  const handleSendChat = async() => {
+    setSendingChat(true)
+    
+    try {
+      const res = await apiFetch<any>(`/messages/groups/send`, {
+        method: "POST",
+        body: {
+          content: input,
+          destination: groupId
+        }
+      })
+      if (res.data) {
+        handleFetchChats()
+      }
+      const data = res.data
+      console.log('Data: ', data)
+      setChats(data)
+    } catch (err) {
+      console.warn(err)
+    } finally {
+      setInput('')
+      setSendingChat(false)
+    }
+  }
+
+  const handleFetchChats = async () => {
+    console.log('Fetching chats...')
+    setLoadingChats(false)
+    
+    try {
+      const res = await apiFetch<any>(`/messages/${groupId}`)
+      const data = res?.data
+      console.log('Data: ', data)
+      setChats(data)
+    } catch (err) {
+      console.warn(err)
+      setLoadingChats(false)
+    } finally {
+      setLoadingChats(true)
+    }
+  }
+
+  useEffect(() => {
+    setSelectedGroupId(groupId as string)
+  }, [groupId])
+
+  useEffect(() => {
+    handleFetchChats();
+  }, [selectedGroupId])
   return (
     <>
       <View style={styles.container}>
-        <Header title={name} />
-
-        <FlatList
-          data={dummyMessages}
-          renderItem={({ item }) => (
-            <MessageBubble text={item.text} sent={item.sent} />
-          )}
-          keyExtractor={(item) => item.id}
-          style={styles.messages}
-        />
+        <Header title="Chats" />
+        {
+          // (loadingChats) ? (
+          //   <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+          //     <ActivityIndicator color="#238636"/>
+          //   </View>
+          // ) : (
+            
+          // )
+          <FlatList
+            data={chats}
+            renderItem={({ item }) => (
+              <MessageBubble text={item.content} sent={item.sender.id === userId} />
+            )}
+            ListEmptyComponent={() => (
+              <View style={{paddingVertical: 20, flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                <Text>Chat not found ...</Text>
+              </View>
+            )}
+            keyExtractor={(item) => item?.id}
+            style={styles.messages}
+          />
+        }
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -40,10 +120,8 @@ const HomeScreen: React.FC = () => {
               value={input}
               onChangeText={setInput}
             />
-            <TouchableOpacity>
-              <Text style={styles.sendText}>
-                Send
-              </Text>
+            <TouchableOpacity style={styles.sendButton} onPress={handleSendChat}>
+              {sendingChat ? <ActivityIndicator size={22} color="white" /> : <Ionicons name="paper-plane" color="white" size={22} />} 
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -79,12 +157,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 18,
     borderRadius: 25,
-  },
-  sendText: {
-    color: "#fff",
-    fontWeight: "700",
   }
 })
 
 export default HomeScreen
-
